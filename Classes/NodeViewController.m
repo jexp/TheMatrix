@@ -55,12 +55,12 @@
 
 - (NSString*) titleFrom:(NSDictionary*) propertyContainer {
 	NSDictionary* props=[propertyContainer objectForKey: @"data"];
-	if (!props) return nil;
+	if (!props) return @"";
 	for (NSString* prop in self.titleProperties) {
 		id value=[props objectForKey:prop];
 		if (value) return [value description];
 	}
-	return nil;
+	return @"";
 }
 - (id) loadJsonFrom: (NSString*) uri {
 	NSError *error = nil;
@@ -80,9 +80,10 @@
 	self.title=[self titleFrom:self.data];
 
 	NSLog(@"Data %@ \n",self.data);
-
-	self.propertyKeys = [((NSDictionary*)[self.data objectForKey:@"data"]) keysSortedByValueUsingSelector:@selector(caseInsensitiveCompare:)];
+	self.propertyKeys = [((NSDictionary*)[self.data objectForKey:@"data"]) allKeys];
+	self.propertyKeys = [self.propertyKeys sortedArrayUsingSelector:@selector(caseInsensitiveCompare:)];
 	self.allRelationships = [self loadJsonFrom:[self.data objectForKey:@"all_relationships"]];
+	
 }
 
 - (void) setNodeUri:(NSString *) uri {
@@ -128,6 +129,9 @@
     return 0;
 }
 
+- (BOOL) isOutgoingRelationship: (NSDictionary*) relationship {
+	return [[relationship objectForKey:@"start"] isEqualToString: self.nodeUri];
+}
 
 // Customize the appearance of table view cells.
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -155,7 +159,14 @@
 		}
 		case 2: {
 			NSDictionary* relationship=[self.allRelationships objectAtIndex: indexPath.row];
-			cell.textLabel.text = [NSString stringWithFormat:@"%@ (%@)",[self titleFrom:self.data],[relationship objectForKey:@"type"]]; // todo main-prop
+			cell.textLabel.text = [NSString stringWithFormat:@"%@ (%@)",[self titleFrom:relationship],[relationship objectForKey:@"type"]]; // todo main-prop
+			if ([self isOutgoingRelationship:relationship]) {
+				cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+				cell.imageView.image = [UIImage imageNamed:@"empty_left.png"];
+			} else {
+				cell.accessoryType = UITableViewCellAccessoryNone;
+				cell.imageView.image = [UIImage imageNamed:@"disclosure_left.png"];
+			}
 			cell.detailTextLabel.text = [relationship objectForKey:@"end"];
 			break;
 		}
@@ -213,7 +224,7 @@
 	NSDictionary* relationship=[self.allRelationships objectAtIndex: indexPath.row];
 	NodeViewController *detailViewController = [[NodeViewController alloc] initWithNibName:@"NodeViewController" bundle:nil];
 	detailViewController.titleProperties = self.titleProperties;
-	detailViewController.nodeUri = [relationship objectForKey:@"end"];
+	detailViewController.nodeUri = [relationship objectForKey: [self isOutgoingRelationship:relationship] ? @"end" : @"start"];
     [self.navigationController pushViewController:detailViewController animated:YES];
     [detailViewController release];
 }

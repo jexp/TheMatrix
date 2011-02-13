@@ -33,6 +33,17 @@
     [addButton release];
 }
 
+// todo NSUrl, move to database
+- (NSString*) urlFor: (NSManagedObject*) database andNode: (NSNumber*) nodeId  {
+	NSString* instance = [database valueForKey:@"instance"];
+	NSString* path = [NSString stringWithFormat:@"%@%@%@", 
+					  instance ? [NSString stringWithFormat: @"%@/", instance] : @"" , 
+					  @"db/data/", 
+					  nodeId ? [NSString stringWithFormat: @"node/%@", nodeId] : @""];
+	return [NSString stringWithFormat:@"http://%@:%@/%@",[database valueForKey:@"host"],[database valueForKey:@"port"],path];
+}
+
+
 
 // Implement viewWillAppear: to do additional setup before the view is presented.
 - (void)viewWillAppear:(BOOL)animated {
@@ -68,7 +79,7 @@
 - (void)configureCell:(UITableViewCell *)cell atIndexPath:(NSIndexPath *)indexPath {
     
     NSManagedObject *managedObject = [self.fetchedResultsController objectAtIndexPath:indexPath];
-    cell.textLabel.text = [[managedObject valueForKey:@"host"] description];
+    cell.textLabel.text = [self urlFor:managedObject andNode:nil];
 }
 
 
@@ -182,14 +193,10 @@
 #pragma mark Table view delegate
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
-    // Navigation logic may go here -- for example, create and push another view controller.
      NodeViewController *detailViewController = [[NodeViewController alloc] initWithNibName:@"NodeViewController" bundle:nil];
 	 NSManagedObject *database = [[self fetchedResultsController] objectAtIndexPath:indexPath];
-     // todo retrieve root node
-	 detailViewController.titleProperties = [NSSet setWithObjects:@"name",@"title",nil];
-	 detailViewController.nodeUri = @"http://localhost:7474/db/data/node/0";
-     // ...
-     // Pass the selected object to the new view controller.
+	 detailViewController.titleProperties = [NSSet setWithObjects:@"name",@"title",@"role",nil];
+	 detailViewController.nodeUri = [self urlFor:database andNode:[NSNumber numberWithInt:0]];
      [self.navigationController pushViewController:detailViewController animated:YES];
      [detailViewController release];
 }
